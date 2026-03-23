@@ -18,6 +18,8 @@ namespace Harrypotter
                 SpellekBeolvasasa("HP_spells.csv");
                 KarakterekBeolvasasa("HP_characters.csv");
 
+                MentesAdatbazisba();
+
                 Console.WriteLine("Beolvasás sikeres.");
                 Console.WriteLine("Spellek száma: " + spells.Count);
                 Console.WriteLine("Karakterek száma: " + characters.Count);
@@ -191,6 +193,41 @@ namespace Harrypotter
             mezok.Add(aktualis.ToString());
 
             return mezok;
+        }
+        static void MentesAdatbazisba()
+        {
+            string connStr = "server=127.0.0.1;port=3307;database=harrypotter;uid=root;pwd=;";
+
+            using (MySql.Data.MySqlClient.MySqlConnection conn =
+                   new MySql.Data.MySqlClient.MySqlConnection(connStr))
+            {
+                conn.Open();
+
+                foreach (var c in characters)
+                {
+                    string sql = @"INSERT INTO characters
+            (`index`, full_name, nickname, hogwarts_house, interpreted_by, image, birthdate)
+            VALUES (@index, @full_name, @nickname, @hogwarts_house, @interpreted_by, @image, @birthdate)";
+
+                    using (MySql.Data.MySqlClient.MySqlCommand cmd =
+                           new MySql.Data.MySqlClient.MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@index", c.Id);
+                        cmd.Parameters.AddWithValue("@full_name", c.FullName);
+                        cmd.Parameters.AddWithValue("@nickname", c.Nickname);
+                        cmd.Parameters.AddWithValue("@hogwarts_house", c.HogwartsHouse);
+                        cmd.Parameters.AddWithValue("@interpreted_by", c.InterpretedBy);
+                        cmd.Parameters.AddWithValue("@image", c.Image);
+
+                        if (c.Birthdate == DateTime.MinValue)
+                            cmd.Parameters.AddWithValue("@birthdate", DBNull.Value);
+                        else
+                            cmd.Parameters.AddWithValue("@birthdate", c.Birthdate);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
         }
     }
 }
