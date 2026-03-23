@@ -16,13 +16,13 @@ namespace Harrypotter
         public string Image { get; set; }
         public DateTime Birthdate { get; set; }
 
-        public List<string> Children { get; set; }
-        public List<string> KnownSpells { get; set; }
+        public List<Child> Children { get; set; }
+        public List<Spell> KnownSpells { get; set; }
 
         public Character()
         {
-            Children = new List<string>();
-            KnownSpells = new List<string>();
+            Children = new List<Child>();
+            KnownSpells = new List<Spell>();
         }
 
     }

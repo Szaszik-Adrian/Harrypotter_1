@@ -9,142 +9,175 @@ namespace Harrypotter
 {
     public class Program
     {
+        static List<Spell> spells = new List<Spell>();
         static List<Character> characters = new List<Character>();
         static void Main(string[] args)
         {
             try
             {
-                Beolvasas("HP_characters.csv");
+                SpellekBeolvasasa("HP_spells.csv");
+                KarakterekBeolvasasa("HP_characters.csv");
 
                 Console.WriteLine("Beolvasás sikeres.");
+                Console.WriteLine("Spellek száma: " + spells.Count);
                 Console.WriteLine("Karakterek száma: " + characters.Count);
                 Console.WriteLine();
 
-                // Rendezés 
-                var rendezett = characters.OrderByDescending(x => x.Birthdate);
+                Console.WriteLine("Karakterek születési dátum szerint csökkenő sorrendben:");
+                var rendezett = characters.OrderByDescending(x => x.Birthdate).ToList();
 
-                foreach (var c in rendezett)
+                foreach (var karakter in rendezett)
                 {
-                    Console.WriteLine(c.FullName + " - " + c.Birthdate.ToString("yyyy.MM.dd"));
+                    Console.WriteLine(karakter.FullName + " - " + karakter.Birthdate.ToString("yyyy.MM.dd"));
                 }
 
                 Console.WriteLine();
 
-                // Legidősebb / legfiatalabb
-                var legidosebb = characters.OrderBy(x => x.Birthdate).First();
-                var legfiatalabb = characters.OrderByDescending(x => x.Birthdate).First();
+                Character legidosebb = characters.OrderBy(x => x.Birthdate).FirstOrDefault();
+                Character legfiatalabb = characters.OrderByDescending(x => x.Birthdate).FirstOrDefault();
 
-                Console.WriteLine("Legidősebb: " + legidosebb.FullName);
-                Console.WriteLine("Legfiatalabb: " + legfiatalabb.FullName);
+                if (legidosebb != null)
+                    Console.WriteLine("Legidősebb: " + legidosebb.FullName);
+
+                if (legfiatalabb != null)
+                    Console.WriteLine("Legfiatalabb: " + legfiatalabb.FullName);
 
                 Console.WriteLine();
-
-                // Keresés
                 Console.Write("Adj meg egy becenevet: ");
-                string keres = Console.ReadLine();
+                string keresettBecenev = Console.ReadLine();
 
-                var talalat = characters.FirstOrDefault(x =>
-                    x.Nickname.ToLower() == keres.ToLower());
+                Character talalat = characters.FirstOrDefault(x =>
+                    !string.IsNullOrWhiteSpace(x.Nickname) &&
+                    x.Nickname.ToLower() == keresettBecenev.ToLower());
 
                 if (talalat != null)
                 {
-                    Console.WriteLine("Név: " + talalat.FullName);
+                    Console.WriteLine("Karakter neve: " + talalat.FullName);
 
-                    Console.WriteLine("Varázslatok:");
-                    foreach (var s in talalat.KnownSpells)
-                        Console.WriteLine("- " + s);
+                    Console.Write("Varázslatai: ");
+                    if (talalat.KnownSpells.Count > 0)
+                        Console.WriteLine(string.Join(", ", talalat.KnownSpells.Select(x => x.Name)));
+                    else
+                        Console.WriteLine("nincs");
 
-                    Console.WriteLine("Gyermekek:");
-                    foreach (var gy in talalat.Children)
-                        Console.WriteLine("- " + gy);
+                    Console.Write("Gyermekei: ");
+                    if (talalat.Children.Count > 0)
+                        Console.WriteLine(string.Join(", ", talalat.Children.Select(x => x.Name)));
+                    else
+                        Console.WriteLine("nincs");
                 }
                 else
                 {
-                    Console.WriteLine("Nincs találat.");
+                    Console.WriteLine("Nincs ilyen becenevű karakter.");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Hiba: " + ex.Message);
+                Console.WriteLine("Hiba történt: " + ex.Message);
             }
 
             Console.ReadKey();
         }
-        static void Beolvasas(string fajlnev)
+        static void SpellekBeolvasasa(string fajlnev)
         {
-            var sorok = File.ReadAllLines(fajlnev, Encoding.UTF8);
+            string[] sorok = File.ReadAllLines(fajlnev, Encoding.UTF8);
 
-            for (int i = 1; i < sorok.Length; i++)
+            for (int i = 1; i < sorok.Length; i++) // 0. sor a fejléc
             {
-                var mezok = CsvFelbontas(sorok[i]);
+                List<string> mezok = CsvSorFeldolgozasa(sorok[i]);
+
+                if (mezok.Count < 3)
+                    continue;
+
+                string nev = mezok[0].Trim();
+                string use = mezok[1].Trim();
+                int id;
+
+                if (int.TryParse(mezok[2].Trim(), out id))
+                {
+                    spells.Add(new Spell(id, nev, use));
+                }
+            }
+        }
+        static void KarakterekBeolvasasa(string fajlnev)
+        {
+            string[] sorok = File.ReadAllLines(fajlnev, Encoding.UTF8);
+
+            for (int i = 1; i < sorok.Length; i++) // 0. sor a fejléc
+            {
+                List<string> mezok = CsvSorFeldolgozasa(sorok[i]);
 
                 if (mezok.Count < 9)
                     continue;
 
-                Character c = new Character();
+                Character uj = new Character();
 
-                c.FullName = mezok[0].Trim();
-                c.Nickname = mezok[1].Trim();
-                c.HogwartsHouse = mezok[2].Trim();
-                c.InterpretedBy = mezok[3].Trim();
+                uj.FullName = mezok[0].Trim();
+                uj.Nickname = mezok[1].Trim();
+                uj.HogwartsHouse = mezok[2].Trim();
+                uj.InterpretedBy = mezok[3].Trim();
 
-                string childrenMezo = mezok[4].Trim();
-                c.Image = mezok[5].Trim();
+                string gyerekekMezo = mezok[4].Trim();
+                uj.Image = mezok[5].Trim();
 
                 DateTime datum;
-                if (DateTime.TryParse(mezok[6], out datum))
-                    c.Birthdate = datum;
+                if (DateTime.TryParse(mezok[6].Trim(), out datum))
+                    uj.Birthdate = datum;
                 else
-                    c.Birthdate = DateTime.MinValue;
+                    uj.Birthdate = DateTime.MinValue;
 
                 int id;
-                if (int.TryParse(mezok[7], out id))
-                    c.Id = id;
+                if (int.TryParse(mezok[7].Trim(), out id))
+                    uj.Id = id;
 
-                string spellsMezo = mezok[8].Trim();
+                string knownSpellsMezo = mezok[8].Trim();
 
-                // Gyerekek
-                if (!string.IsNullOrWhiteSpace(childrenMezo))
+                if (!string.IsNullOrWhiteSpace(gyerekekMezo))
                 {
-                    var gyerekek = childrenMezo.Split(new char[] { '|', ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] gyerekek = gyerekekMezo.Split(new char[] { '|', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
-                    foreach (var gy in gyerekek)
+                    foreach (string gy in gyerekek)
                     {
-                        string nev = gy.Trim().Trim('"');
-                        if (nev != "")
-                            c.Children.Add(nev);
+                        string tisztitott = gy.Trim().Trim('"');
+                        if (tisztitott != "")
+                            uj.Children.Add(new Child(tisztitott));
                     }
                 }
 
-                // Spellek 
-                if (!string.IsNullOrWhiteSpace(spellsMezo))
+                if (!string.IsNullOrWhiteSpace(knownSpellsMezo))
                 {
-                    var varazslatok = spellsMezo.Split(new char[] { '|', ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] varazslatok = knownSpellsMezo.Split(new char[] { '|', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
-                    foreach (var v in varazslatok)
+                    foreach (string varazs in varazslatok)
                     {
-                        string nev = v.Trim().Trim('"');
-                        if (nev != "")
-                            c.KnownSpells.Add(nev);
+                        string tisztitott = varazs.Trim().Trim('"');
+
+                        Spell talalt = spells.FirstOrDefault(x =>
+                            x.Name.ToLower() == tisztitott.ToLower());
+
+                        if (talalt != null)
+                            uj.KnownSpells.Add(talalt);
                     }
                 }
 
-                characters.Add(c);
+                characters.Add(uj);
             }
         }
-        static List<string> CsvFelbontas(string sor)
+        static List<string> CsvSorFeldolgozasa(string sor)
         {
             List<string> mezok = new List<string>();
             StringBuilder aktualis = new StringBuilder();
-            bool idezo = false;
+            bool idezojelben = false;
 
-            foreach (char c in sor)
+            for (int i = 0; i < sor.Length; i++)
             {
+                char c = sor[i];
+
                 if (c == '"')
                 {
-                    idezo = !idezo;
+                    idezojelben = !idezojelben;
                 }
-                else if (c == ',' && !idezo)
+                else if (c == ',' && !idezojelben)
                 {
                     mezok.Add(aktualis.ToString());
                     aktualis.Clear();
